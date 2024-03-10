@@ -2,6 +2,7 @@
 #include "lexico.h"
 #include "sintactico.h"
 #include "definiciones.h"
+#include "entrada.h"
 #include <stdio.h>
 
 FILE* archivo;
@@ -19,6 +20,9 @@ int main(){
             return -1;
         }
     }
+    //Iniciamos el sistema de entrada
+    iniciarEntrada();
+
     //Iniciamos tabla de símbolos
     iniciarTabla();
 

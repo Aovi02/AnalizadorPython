@@ -1,5 +1,5 @@
 #opciones de compilacion, muestra todos los warnings (-Wall)
-CC=gcc -Wall -g
+CC = gcc -Wall -g
 #si incluye una librer�a est�ndar, en este caso la matematica (fichero libm.a)
 #todas tienen el formato de fichero libNOMBRE.a
 #y  al incluirla en el compilador se pone -lNOMBRE
@@ -14,10 +14,10 @@ INCLUDES = -I $(HEADER_FILES_DIR)
 OUTPUT = main
 
 #ficheros .h.  Si hay varios, se precede cada uno con $(HEADER_FILES_DIR)/
-HEADERS = $(HEADER_FILES_DIR)/lexico.h sintactico.h TS.h definiciones.h
+HEADERS = $(HEADER_FILES_DIR)/lexico.h sintactico.h TS.h definiciones.h errores.h entrada.h
 
 #FUENTES: todos los archivos .c necesarios
-SRCS = main.c lexico.c sintactico.c TS.c
+SRCS = main.c lexico.c sintactico.c TS.c entrada.c errores.c
 
 #ficheros .o: todos los .o con un analogo .c en SRCS
 OBJS = $(SRCS:.c=.o)

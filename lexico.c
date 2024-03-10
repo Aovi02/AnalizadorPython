@@ -1,12 +1,12 @@
 #include "lexico.h"
 #include "TS.h"
 #include "definiciones.h"
+#include "entrada.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
-extern FILE* archivo;
 extern ComponenteLexico* raizTabla;
 
 ComponenteLexico* procesarComentario(int c);
@@ -19,44 +19,51 @@ ComponenteLexico* procesarDelimitador(int c);
 ComponenteLexico* siguienteComponenteLexico(){
 
     //Empezamos a leer caracter a caracter, sólo me face falta leer uno y pasárselo a un autómata
-    int c;
-    while ((c = fgetc(archivo)) != EOF) {
-        if(c == '#'){
-            return procesarComentario(c);
-        }
-        else if(c == '"'){
-            return procesarComentarioMulti(c);
-        }
-        else if((c >= 65 && c <= 90) || (c >= 97 && c <= 122)){
-            return procesarCadenaAlfanumerica(c);
-        }
-        else if(c >= 48 && c <= 57){
-            return procesarNumero(c);
-        }
-        else if(c == '+' || c == '-' || c == '/' || c == '*' || c == '^' || c == '=' || c == '<' || c == '>' || c == '%'){
-            return procesarOperacion(c);
-        }
-        else if(c == '{' || c == '(' || c == '[' || c == '.' || c == ',' || c == ':'){
-            return procesarDelimitador(c);
-        }
+    char* p = siguienteCaracter(1);
+    char c = *p;
+
+    while(c == '\n' || c == ' ' || c == '\t'){
+        p = siguienteCaracter(0);
+        c = *p;
+    }
+
+    if(c == '#'){
+        return procesarComentario(c);
+    }
+    else if(c == '"'){
+        return procesarComentarioMulti(c);
+    }
+    else if((c >= 65 && c <= 90) || (c >= 97 && c <= 122)){
+        return procesarCadenaAlfanumerica(c);
+    }
+    else if(c >= 48 && c <= 57){
+        return procesarNumero(c);
+    }
+    else if(c == '+' || c == '-' || c == '/' || c == '*' || c == '^' || c == '=' || c == '<' || c == '>' || c == '%'){
+        return procesarOperacion(c);
+    }
+    else if(c == '{' || c == '(' || c == '[' || c == '.' || c == ',' || c == ':' || c == '}' || c == ')' || c == ']'){
+        return procesarDelimitador(c);
     }
 
 }
 
 ComponenteLexico* procesarComentario(int c){
     //Para procesar un comentario, simplemente leo caracteres hasta encontrar un retorno de carro
-    int d;
-    while ((d = fgetc(archivo)) != EOF) {
-        if(d == '\n'){
+    char* p;
+    while ((p = siguienteCaracter(0)) != NULL) {
+        c = *p;
+        if(c == '\n'){
             ComponenteLexico* a = crearNodo("\n", NEWLINE);
             return a;
         }
     }
+    return NULL;
 }
 
 ComponenteLexico* procesarComentarioMulti(int c){
     //Para procesar un comentario multi linea, primero miro que haya otras 2 comillas
-    int d;
+    char* p;
     //Buffer para comprobar comentario
     char buf_start[3];
     char buf_end[3];
@@ -64,15 +71,16 @@ ComponenteLexico* procesarComentarioMulti(int c){
     int j = 0;
     buf_start[i] = c;
 
-    while ((d = fgetc(archivo)) != EOF) {
-        if(d == '"' && i < 2){
-            buf_start[++i] = d;
+    while ((p = siguienteCaracter(0)) != NULL) {
+        c = *p;
+        if(c == '"' && i < 2){
+            buf_start[++i] = c;
         }
-        else if(d == '"' && i >= 2){
-            buf_end[j] = d;
+        else if(c == '"' && i >= 2){
+            buf_end[j] = c;
             j++;
         }
-        else if(d != '"' && j > 0 && j < 3){
+        else if(c != '"' && j > 0 && j < 3){
             j = 0;
         }
 
@@ -81,22 +89,24 @@ ComponenteLexico* procesarComentarioMulti(int c){
             return a;
         }
     }
+    return NULL;
 }
 
 ComponenteLexico* procesarCadenaAlfanumerica(int c){
     //Hay que leer hasta un delimitador específico: puntos, espacios en blanco o saltos de linea
-    int d;
+    char* p;
 
-    char buffer[20];
+    char buffer[TAM_BLOQUE];
     int i = 1;
     buffer[0] = c;
 
-    while ((d = fgetc(archivo)) != EOF) {
-        if(d == '\n' || d == '.' || d == ' ' || d == '(' || d == '[' || d == '{'){
-            ungetc(d, archivo);
+    while ((p = siguienteCaracter(1)) != NULL) {
+        c = *p;
+        if(c == '\n' || c == '.' || c == ' ' || c == '(' || c == '[' || c == '{'){
+            devolverCaracter();
             break;
         }
-        buffer[i] = d;
+        buffer[i] = c;
         i++;
     }
 
@@ -114,114 +124,80 @@ ComponenteLexico* procesarCadenaAlfanumerica(int c){
 }
 
 ComponenteLexico* procesarNumero(int c){
-    int d;
-    char buffer[20];
-    if(c == '0'){
-        if(d = fgetc(archivo) != EOF){
-            //De acuerdo con la especificación de Python, puedo tener numeros octales, hexadecimales y binarios
-            //Hago un sub-autómata para cada uno
-            switch (d)
-            {
-            case 'b':
-                enteroBinario(buffer);
-                break;
-            case 'x':
-                enteroHexadecimal(buffer);
-                break;
-            case 'o':
-                enteroOctal(buffer);
-                break;
-            case 'e':
-                floatExponencial(buffer);
-                break;
-            default:
-                break;
-            }
-        }
-    }
-    //TODO ESTA PARTE NO ESTA HECHA AUN
-    else{
-        if(d = fgetc(archivo) != EOF){
-            //De acuerdo con la especificación de Python, puedo tener floats normales o con exponencial
-            //Lo que pasa es que si no recibo la e, o bien tengo que llegar a un punto para determinar que es un float
-            //O bien no llego a un punto nunca y entonces es un entero
-            switch (d)
-            {
-            case 'e':
-                floatExponencial(buffer);
-                break;
-            default:
-                enteroDecimal(buffer, d);
-                break;
-            }
-        }
-    }
-}
 
-void enteroBinario(char* buffer){
-    int d, i = 0;
-    while(d = fgetc(archivo) != EOF){
-        if(d == '0' || d == '1'){
-            buffer[i] = d;
-            i++;
-        }
-        else{
-            buffer[i] = '\0';
-            break;
-        }
-    }
-}
-
-void enteroOctal(char* buffer){
-    int d, i = 0;
-    while(d = fgetc(archivo) != EOF){
-        if(d >= 48 && d <= 55){
-            buffer[i] = d;
-            i++;
-        }
-        else{
-            buffer[i] = '\0';
-            break;
-        }
-    }
-}
-
-void enteroHexadecimal(char* buffer){
-    int d, i = 0;
-    while(d = fgetc(archivo) != EOF){
-        if((d >= 48 && d <= 57) || (d >= 97 && d <= 102)){
-            buffer[i] = d;
-            i++;
-        }
-        else{
-            buffer[i] = '\0';
-            break;
-        }
-    }
-}
-
-//TODO ESTE NO ESTA HECHO AUN
-void enteroDecimal(char* buffer, int d){
-    int i = 0;
-
-    while(d = fgetc(archivo) != EOF){
-        if((d >= 48 && d <= 57) || (d >= 97 && d <= 102)){
-            buffer[i] = d;
-            i++;
-        }
-        else{
-            buffer[i] = '\0';
-            break;
-        }
-    }
 }
 
 ComponenteLexico* procesarDelimitador(int c){
-    int d;
-    while ((d = fgetc(archivo)) != EOF) {
-        if(d == '\n'){
-            ComponenteLexico* a = crearNodo("\n", NEWLINE);
-            return a;
+    char buffer[1];
+    buffer[0] = c;
+    ComponenteLexico* a = crearNodo(buffer, DELIMITADOR);
+    return a;
+}
+
+ComponenteLexico* procesarOperacion(int c){
+    //Comprobar los diferentes tipos de operaciones
+    char buffer[3];
+    buffer[0] = c;
+
+    //Vamos a coger otro char
+    char* p = siguienteCaracter(1);
+    c = *p;
+
+    switch (c)
+    {
+    case '=':
+        //El igual es el último siempre, entonces aquí son operadores de 2 caracteres
+        buffer[1] = c;
+        buffer[2] = '\0';
+        ComponenteLexico* a;
+        //Aquí puede haber un montón de símbolos que precedan al igual, tengo que ver cuál de ellos es
+        switch (buffer[0])
+        {
+        case '+':
+            a = crearNodo(buffer, MAS_IGUAL);
+            break;
+        case '-':
+            a = crearNodo(buffer, MENOS_IGUAL);
+            break;
+        case '*':
+            a = crearNodo(buffer, MULT_IGUAL);
+            break;
+        case '/':
+            a = crearNodo(buffer, DIV_IGUAL);
+            break;
+        case '=':
+            a = crearNodo(buffer, IGUAL_IGUAL);
+            break;
+        case '>':
+            a = crearNodo(buffer, MAYOR_IGUAL);
+            break;
+        case '<':
+            a = crearNodo(buffer, MENOR_IGUAL);
+            break;
+        case '^':
+            a = crearNodo(buffer, ELEVAR_IGUAL);
+            break;
+        case '%':
+        a = crearNodo(buffer, MODULO_IGUAL);
+            break;
+        default:
+            break;
         }
+        return a;
+    //Los casos a partir de aqui son de 3 caracteres y no hay ninguno en el wilcoxon
+    case '/':
+        break;
+    case '*':
+        break;
+    case '>':
+        break;
+    case '<':
+        break;
+    default:
+        //Es una operación de único carácter
+        buffer[1] = '\0';
+        devolverCaracter();
+        a = crearNodo(buffer, c);
+        return a;
     }
 }

@@ -10,7 +10,7 @@ ComponenteLexico* crearNodo(char* lexema, int valor){
     ComponenteLexico* raiz = (ComponenteLexico*) malloc(sizeof(ComponenteLexico));
     //Configurar el nodo
     int len = strlen(lexema);
-    raiz->lexema = (char*)malloc(sizeof(len));
+    raiz->lexema = (char*)malloc(len);
     strncpy(raiz->lexema, lexema, len);
     raiz->valor = valor;
     raiz->der = NULL;

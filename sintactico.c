@@ -8,11 +8,7 @@ void iniciarSintactico(){
     do
     {
         aux = siguienteComponenteLexico();
-        printf("------------------------------------------------------\n");
-        printf("Obtenido el siguiente componente lexico:\n");
-        printf("Componente: %d\n", aux->valor);
-        printf("Lexema: %s\n", aux->lexema);
-        printf("------------------------------------------------------\n\n");
+        printf("<-- Componente: %d | Lexema: %s -->\n", aux->valor, aux->lexema);
 
     } while (aux->valor != EOF);
     

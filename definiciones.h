@@ -13,7 +13,15 @@
 #define NOT 309
 #define ID 310
 #define NEWLINE 311
-#define MAS_IGUAL 312
-#define MENOS_IGUAL 313
+#define DELIMITADOR 312
+#define MAS_IGUAL 313
+#define MENOS_IGUAL 314
+#define MULT_IGUAL 315
+#define DIV_IGUAL 316
+#define IGUAL_IGUAL 317
+#define MODULO_IGUAL 318
+#define MAYOR_IGUAL 319
+#define MENOR_IGUAL 320
+#define ELEVAR_IGUAL 321
 
 #endif //DEFINICIONES_H

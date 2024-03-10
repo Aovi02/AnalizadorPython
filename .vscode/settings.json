@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "definiciones.h": "c",
-        "sintactico.h": "c"
+        "sintactico.h": "c",
+        "lexico.h": "c",
+        "stdlib.h": "c"
     }
 }

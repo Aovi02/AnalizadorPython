@@ -424,6 +424,7 @@ ComponenteLexico* procesarOperacion(int c){
         break;
     default:
         //Es una operación de único carácter
+        devolverCaracter();
         buffer[1] = '\0';
         a = crearNodo(buffer, buffer[0]);
         return a;

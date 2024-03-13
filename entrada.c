@@ -47,14 +47,13 @@ char* siguienteCaracter(int lexemaSigue){
             esBloqueA = 0;
             //Liberamos A solo si el lexema no sigue por aquí
             if(!lexemaSigue){
-                //TODO ESTO NO ESTÁ BIEN
-                if(*r == '\n' || *r == ' ' || *r == '\t' || *r == EOF){
-                    r = delantero;
-                }
                 free(bloqueA);
                 inicio = delantero;
                 bloqueA = NULL;
             }
+            r = delantero;
+            delantero++;
+            posDelantero++;
             return r;
         }
         //Lo mismo de antes pero para B
@@ -68,13 +67,14 @@ char* siguienteCaracter(int lexemaSigue){
             esBloqueA = 1;
             //Liberamos B bajo el mismo criterio que A
             if(!lexemaSigue){
-                if(*r == '\n' || *r == ' ' || *r == '\t' || *r == EOF){
-                    r = delantero;
-                }
+                //Como al principio igualaba r a delantero, si delantero lo he movido, r tendré que hacerlo también
                 free(bloqueB);
                 inicio = delantero;
                 bloqueB = NULL;
             }
+            r = delantero;
+            delantero++;
+            posDelantero++;
             return r;
         }
     }

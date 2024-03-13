@@ -32,7 +32,7 @@ def wilcoxon_test(a, b, alpha = .05):
             r_plus += ranks[i]
         else:
             r_minus += ranks[i]*2**-1
-            r_plus += ranks[i]/2.
+            r_plus += ranks[i]/2
     # Compute the minimum of both sums
     T = min([r_plus, r_minus])
     # Check if it can be approximated by a gaussian distribution

@@ -8,7 +8,7 @@ void iniciarSintactico(){
     do
     {
         aux = siguienteComponenteLexico();
-        printf("<-- Componente: %d | Lexema: %s -->\n", aux->valor, aux->lexema);
+        printf("--- Componente: %d | Lexema: \"%s\" ---\n", aux->valor, aux->lexema);
 
     } while (aux->valor != EOF);
     

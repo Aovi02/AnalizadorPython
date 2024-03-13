@@ -47,6 +47,10 @@ char* siguienteCaracter(int lexemaSigue){
             esBloqueA = 0;
             //Liberamos A solo si el lexema no sigue por aquí
             if(!lexemaSigue){
+                //TODO ESTO NO ESTÁ BIEN
+                if(*r == '\n' || *r == ' ' || *r == '\t' || *r == EOF){
+                    r = delantero;
+                }
                 free(bloqueA);
                 inicio = delantero;
                 bloqueA = NULL;
@@ -64,6 +68,9 @@ char* siguienteCaracter(int lexemaSigue){
             esBloqueA = 1;
             //Liberamos B bajo el mismo criterio que A
             if(!lexemaSigue){
+                if(*r == '\n' || *r == ' ' || *r == '\t' || *r == EOF){
+                    r = delantero;
+                }
                 free(bloqueB);
                 inicio = delantero;
                 bloqueB = NULL;
@@ -82,29 +89,34 @@ void devolverCaracter(){
     if(posDelantero == 15){
         //Lo coloco en el EOF de bloqueA
         delantero = bloqueA + (TAM_BLOQUE - 1);
+        posDelantero = TAM_BLOQUE - 1;
     }
     //Si el puntero de delantero está justo al principio del bloqueA
     else if(posDelantero == 0){
         //Lo coloco en el EOF de bloqueB
         delantero = bloqueB + (TAM_BLOQUE - 1);
+        posDelantero = TAM_BLOQUE*2 - 2;
     }
     //Está en medio, y se puede restar bien
-    else
+    else{
         delantero--;
+        posDelantero--;
+    }
 
     //Como devolver un caracter implica haber encontrado un lexema válido, puedo mover inicio junto a delantero
     //Si inicio estaba en un bloque distinto al de delantero, puedo borrarlo aquí
     //Caso en el que inicio está en A y el lexema acaba en B, puedo borrar A
-    if(posInicio < TAM_BLOQUE && posDelantero >= TAM_BLOQUE)
-    {
-        inicio = delantero;
+    if(posInicio < TAM_BLOQUE && posDelantero >= TAM_BLOQUE){
         free(bloqueA);
         bloqueA = NULL;
+        esBloqueA = 0;
     }
     //El caso complementario
     else if(posInicio >= TAM_BLOQUE && posDelantero < TAM_BLOQUE){
-        inicio = delantero;
         free(bloqueB);
         bloqueB = NULL;
+        esBloqueA = 1;
     }
+    inicio = delantero;
+    posInicio = posDelantero;
 }

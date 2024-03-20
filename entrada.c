@@ -1,4 +1,5 @@
 #include "entrada.h"
+#include "errores.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -21,6 +22,9 @@ int posInicio = 0;
 //Indicador de elementos leidos por fread para llegar al final del archivo
 int posFinal = 0;
 
+//Flag que indica si hubo desbordamiento
+int leidos = 0;
+
 void iniciarEntrada(){
     bloqueA = (char*)malloc(sizeof(TAM_BLOQUE));
     bloqueA[TAM_BLOQUE - 1] = EOF;
@@ -30,9 +34,31 @@ void iniciarEntrada(){
     posFinal = fread(bloqueA, 1, TAM_BLOQUE - 1, archivo) + 1;
 }
 
+void limpiarEntrada(){
+    free(bloqueA);
+    bloqueA = NULL;
+    free(bloqueB);
+    bloqueB = NULL;
+    delantero = NULL;
+    inicio = NULL;
+}
+
 char* siguienteCaracter(int lexemaSigue){
 
     char* r = delantero;
+    if(!lexemaSigue)
+        leidos= 0;
+    else
+        leidos++;
+
+    //Antes de avanzar con el delantero, está bien comprobar que el lexema no se pasa del tamaño del bloque
+    //El motivo de comprobarlo aquí y no más abajo cuando se suma delantero es cuestión de eficiencia
+    //Si lo compruebo aquí y resulta que el lexema se pasa, puedo ir alternando entre los bloques hasta que se acabe de leer
+    if(leidos > TAM_BLOQUE && lexemaSigue){
+        errorLexemaGrande();
+        leidos = 0;
+        return NULL;
+    }
 
     if(*delantero == EOF){
         //Si delantero ha llegao a un EOF necesito ver si es fin de bloque A, B o si se acabó como tal el archivo
@@ -67,7 +93,6 @@ char* siguienteCaracter(int lexemaSigue){
             esBloqueA = 1;
             //Liberamos B bajo el mismo criterio que A
             if(!lexemaSigue){
-                //Como al principio igualaba r a delantero, si delantero lo he movido, r tendré que hacerlo también
                 free(bloqueB);
                 inicio = delantero;
                 bloqueB = NULL;
@@ -75,11 +100,16 @@ char* siguienteCaracter(int lexemaSigue){
             r = delantero;
             delantero++;
             posDelantero++;
+            leidos++;
             return r;
         }
     }
 
     delantero++;
+    if(!lexemaSigue){
+        inicio = delantero;
+        posInicio = posDelantero;
+    }
     posDelantero++;
     return r;
 }
@@ -117,6 +147,7 @@ void devolverCaracter(){
         bloqueB = NULL;
         esBloqueA = 1;
     }
+    leidos = 0;
     inicio = delantero;
     posInicio = posDelantero;
 }

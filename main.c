@@ -25,9 +25,21 @@ int main(){
 
     //Iniciamos tabla de símbolos
     iniciarTabla();
+    printf("TABLA AL PRINCIPIO DE TODO:\n");
+    recorridoInorden(raizTabla);
+    printf("\n\n");
 
     //Iniciamos analizador sintactico
     iniciarSintactico();
+
+    //Borrar árbol al final
+    borrarArbol(raizTabla);
+
+    //Limpiar SE
+    limpiarEntrada();
+
+    //Cerrar archivo
+    fclose(archivo);
 
     return 0;
     

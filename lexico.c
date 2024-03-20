@@ -2,6 +2,7 @@
 #include "TS.h"
 #include "definiciones.h"
 #include "entrada.h"
+#include "errores.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -12,6 +13,7 @@ extern ComponenteLexico* raizTabla;
 char buffer[TAM_BLOQUE];
 int posBuffer = 0;
 char* p;
+int linea = 1;
 
 int esDelimitador(int c);
 int esOperador(int c);
@@ -21,7 +23,7 @@ ComponenteLexico* procesarCadenaAlfanumerica(int c);
 ComponenteLexico* procesarNumero(int c, int start);
 ComponenteLexico* procesarOperacion(int c);
 ComponenteLexico* procesarDelimitador(int c);
-ComponenteLexico* procesarLiteral(int c);
+ComponenteLexico* procesarLiteral(int c, char comienzo);
 ComponenteLexico* procesarFloatExponencial(int c);
 ComponenteLexico* procesarNumeroHexadecimal(int c, int start);
 ComponenteLexico* procesarFloat(int c, int start);
@@ -32,11 +34,13 @@ Aquí es donde se pide un char y se decide a qué autómata se pasa dicho char
 ComponenteLexico* siguienteComponenteLexico(){
 
     //Empezamos a leer caracter a caracter
-    p = siguienteCaracter(1);
+    p = siguienteCaracter(0);
     char c = *p;
 
     //Los espacios, los saltos de línea y las tabulaciones, así como el fin del archivo no importan, se ignoran
-    while(c == '\n' || c == ' ' || c == '\t' || c == EOF){
+    while(c == '\n' || c == ' ' || c == '\t'){
+        if(c == '\n')
+            linea++;
         p = siguienteCaracter(0);
         c = *p;
     }
@@ -51,17 +55,33 @@ ComponenteLexico* siguienteComponenteLexico(){
 
         //Esto es un literal
         if(c != '"'){
-            return procesarLiteral(c);
+            return procesarLiteral(c, '"');
         }
         //Esto es comentario multi-linea
         else{
             p = siguienteCaracter(1);
             c = *p;
-            if(c != '"'){
-                //LANZAR ERROR LITERAL MAL FORMADO
-            }
-            else
+            if(c == '"'){
                 return procesarComentarioMulti(c);
+            }   
+        }
+    }
+    //Si es un literal de una sóla de comilla
+    else if(c == '\''){
+        p = siguienteCaracter(1);
+        c = *p;
+
+        //Esto es un literal
+        if(c != '\''){
+            return procesarLiteral(c, '\'');
+        }
+        //Esto es comentario multi-linea
+        else{
+            p = siguienteCaracter(1);
+            c = *p;
+            if(c == '\''){
+                return procesarComentarioMulti(c);
+            }   
         }
     }
     //Esto es cadena alfanumérica
@@ -76,7 +96,9 @@ ComponenteLexico* siguienteComponenteLexico(){
         p = siguienteCaracter(1);
         c = *p;
 
-        while(c == '\n' || c == ' ' || c == '\t' || c == EOF){
+        while(c == '\n' || c == ' ' || c == '\t'){
+            if(c == '\n')
+                linea++;
             p = siguienteCaracter(0);
             c = *p;
         }
@@ -94,7 +116,7 @@ ComponenteLexico* siguienteComponenteLexico(){
             }
             //Si no es ni un dígito, ni un menos, el float está mal formado (quedaría 5e-)
             else{
-                //LANZAR ERROR FLOAT MALFORMADO
+                errorFloatMalformado(linea);
             }
         }
         //Para los floats que tienen punto justo después de un dígito
@@ -108,7 +130,7 @@ ComponenteLexico* siguienteComponenteLexico(){
                 return procesarFloat(c, 2);
             }
             else{
-                //LANZAR ERROR FLOAT MALFORMADO
+                errorFloatMalformado(linea);
             }
         }
         //PARTE ENTEROS
@@ -123,7 +145,7 @@ ComponenteLexico* siguienteComponenteLexico(){
                 return procesarNumeroHexadecimal(c, 2);
             }
             else{
-                //LANZAR ERROR ENTERO MALFORMADO
+                errorEnteroMalformado(linea);
             }
         }
         //Si es un dígito a secas, es un entero y no puede haber otra cosa de por medio
@@ -150,7 +172,9 @@ ComponenteLexico* siguienteComponenteLexico(){
         p = siguienteCaracter(1);
         c = *p;
 
-        while(c == '\n' || c == ' ' || c == '\t' || c == EOF){
+        while(c == '\n' || c == ' ' || c == '\t'){
+            if(c == '\n')
+                linea++;
             p = siguienteCaracter(0);
             c = *p;
         }
@@ -165,8 +189,12 @@ ComponenteLexico* siguienteComponenteLexico(){
             return procesarDelimitador(buffer[0]);
         }
     }
+    else if(c == EOF || c == '\005'){
+        ComponenteLexico* a = crearNodo("\0", EOF);
+        return a;
+    }
     else{
-        //LANZAR ERROR LEXEMA NO RECONOCIDO
+        errorLexemaNoReconocido(linea);
     }
     return NULL;
 }
@@ -186,6 +214,7 @@ ComponenteLexico* procesarComentario(int c){
     while ((p = siguienteCaracter(0)) != NULL) {
         c = *p;
         if(c == '\n'){
+            devolverCaracter();
             //Aquí devuelvo el retorno de carro para indicar que hubo comentario, pero no sería necesario
             ComponenteLexico* a = crearNodo("\n", NEWLINE);
             return a;
@@ -195,26 +224,40 @@ ComponenteLexico* procesarComentario(int c){
 }
 
 //Autómata para procesar un literal string
-ComponenteLexico* procesarLiteral(int c){
+ComponenteLexico* procesarLiteral(int c, char comienzo){
     buffer[0] = c;
     int i = 1;
 
-    while ((p = siguienteCaracter(0)) != NULL) {
+    while ((p = siguienteCaracter(1)) != NULL) {
         c = *p;
         buffer[i] = c;
-        if(c == '"'){
+        if(c == comienzo){
             buffer[i] = '\0';
-            ComponenteLexico* a = crearNodo("\n", NEWLINE);
+            ComponenteLexico* a = crearNodo(buffer, LITERAL);
             return a;
         }
         i++;
+    }
+    //Si en la última posición del bufer no hay '\0' es porque se ha leido hasta Cuenca y el lexema se ha pasado, entonces tengo que seguir leyendo ignorando caracteres
+    //Eso significa que puedo crear el componenteLexico aquí, leer caracteres hasta que la máquina acepte, y después devolverlo. Si eso también falla, siempre queda el NULL
+    if(buffer[i - 1] != '\0'){
+        while ((p = siguienteCaracter(0)) != NULL) {
+            c = *p;
+            if(c == comienzo){
+                buffer[i] = '\0';
+                ComponenteLexico* a = crearNodo(buffer, LITERAL);
+                return a;
+            }
+        }
     }
     return NULL;
 }
 
 //Autómata que procesa los comentarios multi linea
 ComponenteLexico* procesarComentarioMulti(int c){
-    //Para procesar un comentario multi linea, primero miro que haya otras 2 comillas
+
+    //Lo único de lso comentarios es que si empiezan por comiilas triples, tienen que acabar en comillas triples y viceversa, por lo que hay que tenerlo en cuenta
+    char comienzo = c;
 
     while ((p = siguienteCaracter(0)) != NULL) {
         c = *p;
@@ -224,7 +267,21 @@ ComponenteLexico* procesarComentarioMulti(int c){
             if(c == '"'){
                 p = siguienteCaracter(0);
                 c = *p;
-                if(c == '"'){
+                if(c == '"' && c == comienzo){
+                    ComponenteLexico* a = crearNodo("\n", NEWLINE);
+                    return a;
+                }
+            }
+        }
+
+        //Tengo que considerar el set de 3 comillas simples también, pero como tienen que ser seguidas, es repetir la estructura de antes
+        if(c == '\''){
+            p = siguienteCaracter(0);
+            c = *p;
+            if(c == '\''){
+                p = siguienteCaracter(0);
+                c = *p;
+                if(c == '\'' && c == comienzo){
                     ComponenteLexico* a = crearNodo("\n", NEWLINE);
                     return a;
                 }
@@ -400,7 +457,7 @@ ComponenteLexico* procesarOperacion(int c){
             a = crearNodo(buffer, ELEVAR_IGUAL);
             break;
         case '%':
-        a = crearNodo(buffer, MODULO_IGUAL);
+            a = crearNodo(buffer, MODULO_IGUAL);
             break;
         default:
             break;

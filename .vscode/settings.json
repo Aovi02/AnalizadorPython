@@ -3,6 +3,7 @@
         "definiciones.h": "c",
         "sintactico.h": "c",
         "lexico.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "errores.h": "c"
     }
 }

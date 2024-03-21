@@ -17,11 +17,11 @@ void iniciarSintactico(){
                 free(aux);
                 break;
             }
-            //if(!(aux->valor >= 300 && aux->valor <= 310)){
+            if(!(aux->valor >= 300 && aux->valor <= 310)){
                 free(aux->lexema);
                 free(aux);
                 aux = NULL;
-            //}
+            }
         }
     } while (1);
     

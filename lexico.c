@@ -335,8 +335,7 @@ ComponenteLexico* procesarCadenaAlfanumerica(int c){
     //Si no se encuentra, hay que añadirlo y es un ID
     if(a == NULL)
     {
-        a = crearNodo(buffer, ID);
-        raizTabla = insertarNodo(raizTabla, a->lexema, a->valor);
+        a = insertarNodo(raizTabla, buffer, ID);
     }
     return a;
 }

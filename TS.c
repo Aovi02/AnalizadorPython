@@ -11,8 +11,7 @@ ComponenteLexico* crearNodo(char* lexema, int valor){
     //Configurar el nodo
     int len = strlen(lexema);
     raiz->lexema = (char*)malloc(len + 1);
-    strncpy(raiz->lexema, lexema, len);
-    raiz->lexema[len] = '\0';
+    strncpy(raiz->lexema, lexema, len + 1);
     raiz->valor = valor;
     raiz->der = NULL;
     raiz->izq = NULL;
@@ -55,7 +54,7 @@ ComponenteLexico* buscar(ComponenteLexico* raiz, char* lexema) {
     //Buscar en el subárbol izquierdo de forma recursiva, es como la función de añadir, va de la misma forma
     //Se puede poner return aquí en los ifs porque la función parará cuando el primer if se cumpla
     //En un momento dado, algún nodo del subárbol se convertirá en el argumento raiz de esta función y coincidirá con el lexema
-    if (strcmp(lexema, raiz->lexema) < 0) {
+    if (p < 0) {
         return buscar(raiz->izq, lexema);
     }
     //Buscar en el subárbol derecho de forma recursiva
@@ -72,6 +71,7 @@ void borrarArbol(ComponenteLexico* raiz){
         borrarArbol(raiz->der);
         free(raiz->lexema);
         free(raiz);
+        raiz = NULL;
     }
 }
 
@@ -79,7 +79,7 @@ void borrarArbol(ComponenteLexico* raiz){
 void recorridoInorden(ComponenteLexico* raiz) {
     if (raiz != NULL) {
         recorridoInorden(raiz->izq);
-        printf("%s ", raiz->lexema);
+        printf("[%s, %d] ", raiz->lexema, raiz->valor);
         recorridoInorden(raiz->der);
     }
 }

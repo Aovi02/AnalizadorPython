@@ -26,12 +26,22 @@ int posFinal = 0;
 int leidos = 0;
 
 void iniciarEntrada(){
-    bloqueA = (char*)malloc(sizeof(TAM_BLOQUE));
-    bloqueA[TAM_BLOQUE - 1] = EOF;
+    bloqueA = (char*)malloc(TAM_BLOQUE);
+    if(bloqueA == NULL){
+        printf("Error al reservar memoria para el bloqueA\n");
+        exit(EXIT_FAILURE);
+    }
+    bloqueB = (char*)malloc(TAM_BLOQUE);
+    if(bloqueB == NULL){
+        printf("Error al reservar memoria para el bloqueB\n");
+        exit(EXIT_FAILURE);
+    }
+    posFinal = fread(bloqueA, 1, TAM_BLOQUE - 1, archivo);
+    bloqueA[posFinal] = EOF;
+    bloqueB[posFinal] = EOF;
     esBloqueA = 1;
     inicio = bloqueA;
     delantero = bloqueA;
-    posFinal = fread(bloqueA, 1, TAM_BLOQUE - 1, archivo) + 1;
 }
 
 void limpiarEntrada(){
@@ -60,22 +70,19 @@ char* siguienteCaracter(int lexemaSigue){
         return NULL;
     }
 
-    if(*delantero == EOF){
+    if(delantero != NULL && *delantero == EOF){
         //Si delantero ha llegao a un EOF necesito ver si es fin de bloque A, B o si se acabó como tal el archivo
         //Estamos en bloque A, hay que reservar memoria para B
         if(esBloqueA){
-            bloqueB = (char*)malloc(sizeof(TAM_BLOQUE));
-            posFinal = fread(bloqueB, 1, TAM_BLOQUE - 1, archivo) + 1;
-            bloqueB[TAM_BLOQUE - 1] = EOF;
+            posFinal = fread(bloqueB, 1, TAM_BLOQUE - 1, archivo);
+            bloqueB[posFinal] = EOF;
             //Movemos delantero a su posicion nueva
             delantero = bloqueB;
             posDelantero = TAM_BLOQUE;
             esBloqueA = 0;
             //Liberamos A solo si el lexema no sigue por aquí
             if(!lexemaSigue){
-                free(bloqueA);
                 inicio = delantero;
-                bloqueA = NULL;
             }
             r = delantero;
             delantero++;
@@ -84,18 +91,15 @@ char* siguienteCaracter(int lexemaSigue){
         }
         //Lo mismo de antes pero para B
         else{
-            bloqueA = (char*)malloc(sizeof(TAM_BLOQUE));
-            posFinal = fread(bloqueA, 1, TAM_BLOQUE - 1, archivo) + 1;
-            bloqueA[TAM_BLOQUE - 1] = EOF;
+            posFinal = fread(bloqueA, 1, TAM_BLOQUE - 1, archivo);
+            bloqueA[posFinal] = EOF;
             //Movemos delantero a su posicion nueva
             delantero = bloqueA;
             posDelantero = 0;
             esBloqueA = 1;
             //Liberamos B bajo el mismo criterio que A
             if(!lexemaSigue){
-                free(bloqueB);
                 inicio = delantero;
-                bloqueB = NULL;
             }
             r = delantero;
             delantero++;
@@ -137,14 +141,10 @@ void devolverCaracter(){
     //Si inicio estaba en un bloque distinto al de delantero, puedo borrarlo aquí
     //Caso en el que inicio está en A y el lexema acaba en B, puedo borrar A
     if(posInicio < TAM_BLOQUE && posDelantero >= TAM_BLOQUE){
-        free(bloqueA);
-        bloqueA = NULL;
         esBloqueA = 0;
     }
     //El caso complementario
     else if(posInicio >= TAM_BLOQUE && posDelantero < TAM_BLOQUE){
-        free(bloqueB);
-        bloqueB = NULL;
         esBloqueA = 1;
     }
     leidos = 0;

@@ -34,168 +34,180 @@ Aquí es donde se pide un char y se decide a qué autómata se pasa dicho char
 ComponenteLexico* siguienteComponenteLexico(){
 
     //Empezamos a leer caracter a caracter
+    char c;
     p = siguienteCaracter(0);
-    char c = *p;
-
-    //Los espacios, los saltos de línea y las tabulaciones, así como el fin del archivo no importan, se ignoran
-    while(c == '\n' || c == ' ' || c == '\t'){
-        if(c == '\n')
-            linea++;
-        p = siguienteCaracter(0);
+    if(p != NULL){
         c = *p;
-    }
-
-    //Esto es comentario de una sóla línea
-    if(c == '#'){
-        return procesarComentario(c);
-    }
-    else if(c == '"'){
-        p = siguienteCaracter(1);
-        c = *p;
-
-        //Esto es un literal
-        if(c != '"'){
-            return procesarLiteral(c, '"');
-        }
-        //Esto es comentario multi-linea
-        else{
-            p = siguienteCaracter(1);
-            c = *p;
-            if(c == '"'){
-                return procesarComentarioMulti(c);
-            }   
-        }
-    }
-    //Si es un literal de una sóla de comilla
-    else if(c == '\''){
-        p = siguienteCaracter(1);
-        c = *p;
-
-        //Esto es un literal
-        if(c != '\''){
-            return procesarLiteral(c, '\'');
-        }
-        //Esto es comentario multi-linea
-        else{
-            p = siguienteCaracter(1);
-            c = *p;
-            if(c == '\''){
-                return procesarComentarioMulti(c);
-            }   
-        }
-    }
-    //Esto es cadena alfanumérica
-    else if(isalpha(c) || c == '_'){
-        return procesarCadenaAlfanumerica(c);
-    }
-    //Al encontrar un dígito, tengo que contemplar varios tipos de números
-    else if(isdigit(c)){
-        //Guardo el primer dígito
-        buffer[0] = c;
-        //Delantero está en - después de la llamada de abajo
-        p = siguienteCaracter(1);
-        c = *p;
-
+        //Los espacios, los saltos de línea y las tabulaciones, así como el fin del archivo no importan, se ignoran
         while(c == '\n' || c == ' ' || c == '\t'){
+
             if(c == '\n')
                 linea++;
+
             p = siguienteCaracter(0);
-            c = *p;
+
+            if (p != NULL) {
+                c = *p;
+            }
+            else {
+                // Handle the case where p is NULL (end of file or error)
+                break;
+            }
         }
 
-        //PARTE FLOATS
-        //Para los floats exponenciales (por ejemplo 5e-2)
-        if(c == 'e'){
-            buffer[1] = c;
-            //Delantero está en 2 después de la llamada de abajo
+        //Esto es comentario de una sóla línea
+        if(c == '#'){
+            return procesarComentario(c);
+        }
+        else if(c == '"'){
             p = siguienteCaracter(1);
             c = *p;
-            //Después de la e puede haber un - que tengo que considerar, si no lo hay ahora, no lo va a haber en ningún otro sitio
-            if(c == '-' || isdigit(c)){
-                return procesarFloat(c, 2);
+
+            //Esto es un literal
+            if(c != '"'){
+                return procesarLiteral(c, '"');
             }
-            //Si no es ni un dígito, ni un menos, el float está mal formado (quedaría 5e-)
+            //Esto es comentario multi-linea
             else{
-                errorFloatMalformado(linea);
+                p = siguienteCaracter(1);
+                c = *p;
+                if(c == '"'){
+                    return procesarComentarioMulti(c);
+                }   
             }
         }
-        //Para los floats que tienen punto justo después de un dígito
-        else if(c == '.'){
-            buffer[1] = c;
-            //Delantero está en 2 después de la llamada de abajo
+        //Si es un literal de una sóla de comilla
+        else if(c == '\''){
             p = siguienteCaracter(1);
             c = *p;
-            //Sólo puede haber un dígito después de un punto (no se puede hacer cosas como 0.-6)
-            if(isdigit(c)){
-                return procesarFloat(c, 2);
+
+            //Esto es un literal
+            if(c != '\''){
+                return procesarLiteral(c, '\'');
             }
+            //Esto es comentario multi-linea
             else{
-                errorFloatMalformado(linea);
+                p = siguienteCaracter(1);
+                c = *p;
+                if(c == '\''){
+                    return procesarComentarioMulti(c);
+                }   
             }
         }
-        //PARTE ENTEROS
-        //Si hay una x justo después de un 0, es hexadecimal
-        else if(c == 'x' && buffer[0] == '0'){
-            buffer[1] = c;
-            p = siguienteCaracter(1);
-            c = *p;
-            //La referencia del lenguaje Python dice que tiene que haber un dígito más después de la x para ser válido, y como es hexadecimal, puede ser
-            //también de A a F.
-            if(isdigit(c) || (c >= 97 && c <= 102)){
-                return procesarNumeroHexadecimal(c, 2);
-            }
-            else{
-                errorEnteroMalformado(linea);
-            }
+        //Esto es cadena alfanumérica
+        else if(isalpha(c) || c == '_'){
+            return procesarCadenaAlfanumerica(c);
         }
-        //Si es un dígito a secas, es un entero y no puede haber otra cosa de por medio
+        //Al encontrar un dígito, tengo que contemplar varios tipos de números
         else if(isdigit(c)){
-            return procesarNumero(c, 1);
-        }
-        //Si no es NINGUNO de los casos anteriores, devuelvo caracter y proceso lo que ya tengo en el buffer
-        else{
-            devolverCaracter();
-            return procesarNumero(buffer[0], 0);
-        }
-    }
-    //Procesar indicadores de operación, por si hay más símbolos después (para los que son += o ==)
-    else if(esOperador(c)){
-        return procesarOperacion(c);
-    }
-    //Procesar los delimitadores MENOS el punto
-    else if(esDelimitador(c)){
-        return procesarDelimitador(c);
-    }
-    //Para el punto, puede ser delimitador o un float que empiece por punto
-    else if(c == '.'){
-        buffer[0] = c;
-        p = siguienteCaracter(1);
-        c = *p;
-
-        while(c == '\n' || c == ' ' || c == '\t'){
-            if(c == '\n')
-                linea++;
-            p = siguienteCaracter(0);
+            //Guardo el primer dígito
+            buffer[0] = c;
+            //Delantero está en - después de la llamada de abajo
+            p = siguienteCaracter(1);
             c = *p;
-        }
 
-        //Si el siguiente char es un dígito, es un float
-        if(isdigit(c)){
-            return procesarFloat(c, 1);
+            while(c == '\n' || c == ' ' || c == '\t'){
+                if(c == '\n')
+                    linea++;
+                p = siguienteCaracter(0);
+                c = *p;
+            }
+
+            //PARTE FLOATS
+            //Para los floats exponenciales (por ejemplo 5e-2)
+            if(c == 'e'){
+                buffer[1] = c;
+                //Delantero está en 2 después de la llamada de abajo
+                p = siguienteCaracter(1);
+                c = *p;
+                //Después de la e puede haber un - que tengo que considerar, si no lo hay ahora, no lo va a haber en ningún otro sitio
+                if(c == '-' || isdigit(c)){
+                    return procesarFloat(c, 2);
+                }
+                //Si no es ni un dígito, ni un menos, el float está mal formado (quedaría 5e-)
+                else{
+                    errorFloatMalformado(linea);
+                }
+            }
+            //Para los floats que tienen punto justo después de un dígito
+            else if(c == '.'){
+                buffer[1] = c;
+                //Delantero está en 2 después de la llamada de abajo
+                p = siguienteCaracter(1);
+                c = *p;
+                //Sólo puede haber un dígito después de un punto (no se puede hacer cosas como 0.-6)
+                if(isdigit(c)){
+                    return procesarFloat(c, 2);
+                }
+                else{
+                    errorFloatMalformado(linea);
+                }
+            }
+            //PARTE ENTEROS
+            //Si hay una x justo después de un 0, es hexadecimal
+            else if(c == 'x' && buffer[0] == '0'){
+                buffer[1] = c;
+                p = siguienteCaracter(1);
+                c = *p;
+                //La referencia del lenguaje Python dice que tiene que haber un dígito más después de la x para ser válido, y como es hexadecimal, puede ser
+                //también de A a F.
+                if(isdigit(c) || (c >= 97 && c <= 102)){
+                    return procesarNumeroHexadecimal(c, 2);
+                }
+                else{
+                    errorEnteroMalformado(linea);
+                }
+            }
+            //Si es un dígito a secas, es un entero y no puede haber otra cosa de por medio
+            else if(isdigit(c)){
+                return procesarNumero(c, 1);
+            }
+            //Si no es NINGUNO de los casos anteriores, devuelvo caracter y proceso lo que ya tengo en el buffer
+            else{
+                devolverCaracter();
+                return procesarNumero(buffer[0], 0);
+            }
         }
-        //Si no es un número, es un delimitador a secas
+        //Procesar indicadores de operación, por si hay más símbolos después (para los que son += o ==)
+        else if(esOperador(c)){
+            return procesarOperacion(c);
+        }
+        //Procesar los delimitadores MENOS el punto
+        else if(esDelimitador(c)){
+            return procesarDelimitador(c);
+        }
+        //Para el punto, puede ser delimitador o un float que empiece por punto
+        else if(c == '.'){
+            buffer[0] = c;
+            p = siguienteCaracter(1);
+            c = *p;
+
+            while(c == '\n' || c == ' ' || c == '\t'){
+                if(c == '\n')
+                    linea++;
+                p = siguienteCaracter(0);
+                c = *p;
+            }
+
+            //Si el siguiente char es un dígito, es un float
+            if(isdigit(c)){
+                return procesarFloat(c, 1);
+            }
+            //Si no es un número, es un delimitador a secas
+            else{
+                devolverCaracter();
+                return procesarDelimitador(buffer[0]);
+            }
+        }
+        else if(c == EOF){
+            ComponenteLexico* a = crearNodo("EOF", EOF);
+            return a;
+        }
         else{
-            devolverCaracter();
-            return procesarDelimitador(buffer[0]);
+            errorLexemaNoReconocido(linea);
         }
     }
-    else if(c == EOF || c == '\005'){
-        ComponenteLexico* a = crearNodo("\0", EOF);
-        return a;
-    }
-    else{
-        errorLexemaNoReconocido(linea);
-    }
+
     return NULL;
 }
 
@@ -316,7 +328,7 @@ ComponenteLexico* procesarCadenaAlfanumerica(int c){
         }
     }
 
-    //Primero Hay que buscar en la tabla para ver si es palabra reservada o no
+    //Primero Hay que buscar en la tabla para ver si ya existe o es palabra reservada
     buffer[i] = '\0';
     ComponenteLexico* a;
     a = buscar(raizTabla, buffer);

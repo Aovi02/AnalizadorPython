@@ -46,7 +46,7 @@ ComponenteLexico* buscar(ComponenteLexico* raiz, char* lexema) {
     if (raiz == NULL) {
         return raiz;
     }
-    int p = strcmp(raiz->lexema, lexema);
+    int p = strcmp(lexema, raiz->lexema);
 
     if(p == 0)
         return raiz;

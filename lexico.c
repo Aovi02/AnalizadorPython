@@ -35,7 +35,7 @@ ComponenteLexico* siguienteComponenteLexico(){
 
     //Empezamos a leer caracter a caracter
     char c;
-    p = siguienteCaracter(0);
+    p = siguienteCaracter(1);
     if(p != NULL){
         c = *p;
         //Los espacios, los saltos de línea y las tabulaciones, así como el fin del archivo no importan, se ignoran
@@ -54,13 +54,19 @@ ComponenteLexico* siguienteComponenteLexico(){
                 break;
             }
         }
+        //CHAPUZA
+        devolverCaracter();
+        p = siguienteCaracter(1);
+        if (p != NULL) {
+            c = *p;
+        }
 
         //Esto es comentario de una sóla línea
         if(c == '#'){
             return procesarComentario(c);
         }
         else if(c == '"'){
-            p = siguienteCaracter(1);
+            p = siguienteCaracter(0);
             c = *p;
 
             //Esto es un literal
@@ -78,7 +84,7 @@ ComponenteLexico* siguienteComponenteLexico(){
         }
         //Si es un literal de una sóla de comilla
         else if(c == '\''){
-            p = siguienteCaracter(1);
+            p = siguienteCaracter(0);
             c = *p;
 
             //Esto es un literal
@@ -248,7 +254,8 @@ ComponenteLexico* procesarLiteral(int c, char comienzo){
             ComponenteLexico* a = crearNodo(buffer, LITERAL);
             return a;
         }
-        i++;
+        if(i < TAM_BLOQUE)
+            i++;
     }
     //Si en la última posición del bufer no hay '\0' es porque se ha leido hasta Cuenca y el lexema se ha pasado, entonces tengo que seguir leyendo ignorando caracteres
     //Eso significa que puedo crear el componenteLexico aquí, leer caracteres hasta que la máquina acepte, y después devolverlo. Si eso también falla, siempre queda el NULL
@@ -313,12 +320,8 @@ ComponenteLexico* procesarCadenaAlfanumerica(int c){
         c = *p;
         if(isalnum(c) || c == '_'){
             buffer[i] = c;
-            i++;
-            continue;
-        }
-        //Se ignora el EOF del sistema de entrada
-        //OJO; PUEDE DAR PROBLEMAS AL FINAL DEL ARCHIVO
-        else if(c == EOF){
+            if(i < TAM_BLOQUE)
+                i++;
             continue;
         }
         //Paramos al encontrar un delimitador
@@ -328,14 +331,25 @@ ComponenteLexico* procesarCadenaAlfanumerica(int c){
         }
     }
 
-    //Primero Hay que buscar en la tabla para ver si ya existe o es palabra reservada
-    buffer[i] = '\0';
+    //Si en la última posición del bufer no hay '\0' es porque se ha leido hasta Cuenca y el lexema se ha pasado, entonces tengo que seguir leyendo ignorando caracteres
+    //Eso significa que puedo crear el componenteLexico aquí, leer caracteres hasta que la máquina acepte, y después devolverlo. Si eso también falla, siempre queda el NULL
+    if(buffer[i - 1] != '\0'){
+        while ((p = siguienteCaracter(0)) != NULL) {
+            c = *p;
+            if(esDelimitador(c) || c == ' ' || c == '.' || c == '\n'){
+                devolverCaracter();
+                buffer[i] = '\0';
+                break;
+            }
+        }
+    }
     ComponenteLexico* a;
     a = buscar(raizTabla, buffer);
     //Si no se encuentra, hay que añadirlo y es un ID
     if(a == NULL)
     {
-        a = insertarNodo(raizTabla, buffer, ID);
+        raizTabla = insertarNodo(raizTabla, buffer, ID);
+        a = buscar(raizTabla, buffer);
     }
     return a;
 }

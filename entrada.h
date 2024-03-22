@@ -1,7 +1,7 @@
 #ifndef ENTRADA_H
 #define ENTRADA_H
 
-#define TAM_BLOQUE 15
+#define TAM_BLOQUE 10
 
 
 

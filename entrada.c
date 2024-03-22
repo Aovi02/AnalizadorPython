@@ -25,6 +25,9 @@ int posFinal = 0;
 //Flag que indica si hubo desbordamiento
 int leidos = 0;
 
+//Flag para evitar quitar bloque
+int noQuitar = 0;
+
 void iniciarEntrada(){
     bloqueA = (char*)malloc(TAM_BLOQUE);
     if(bloqueA == NULL){
@@ -58,24 +61,16 @@ char* siguienteCaracter(int lexemaSigue){
     char* r = delantero;
     if(!lexemaSigue)
         leidos= 0;
-    else
-        leidos++;
-
-    //Antes de avanzar con el delantero, está bien comprobar que el lexema no se pasa del tamaño del bloque
-    //El motivo de comprobarlo aquí y no más abajo cuando se suma delantero es cuestión de eficiencia
-    //Si lo compruebo aquí y resulta que el lexema se pasa, puedo ir alternando entre los bloques hasta que se acabe de leer
-    if(leidos > TAM_BLOQUE && lexemaSigue){
-        errorLexemaGrande();
-        leidos = 0;
-        return NULL;
-    }
 
     if(delantero != NULL && *delantero == EOF){
         //Si delantero ha llegao a un EOF necesito ver si es fin de bloque A, B o si se acabó como tal el archivo
         //Estamos en bloque A, hay que reservar memoria para B
         if(esBloqueA){
-            posFinal = fread(bloqueB, 1, TAM_BLOQUE - 1, archivo);
-            bloqueB[posFinal] = EOF;
+            if(!noQuitar){
+                posFinal = fread(bloqueB, 1, TAM_BLOQUE - 1, archivo);
+                bloqueB[posFinal] = EOF;
+                noQuitar = 0;
+            }
             //Movemos delantero a su posicion nueva
             delantero = bloqueB;
             posDelantero = TAM_BLOQUE;
@@ -86,13 +81,22 @@ char* siguienteCaracter(int lexemaSigue){
             }
             r = delantero;
             delantero++;
+            if(leidos > TAM_BLOQUE && lexemaSigue){
+                errorLexemaGrande();
+                leidos = 0;
+                return NULL;
+            }
+            leidos++;
             posDelantero++;
             return r;
         }
         //Lo mismo de antes pero para B
         else{
-            posFinal = fread(bloqueA, 1, TAM_BLOQUE - 1, archivo);
-            bloqueA[posFinal] = EOF;
+            if(!noQuitar){
+                posFinal = fread(bloqueA, 1, TAM_BLOQUE - 1, archivo);
+                bloqueA[posFinal] = EOF;
+                noQuitar = 0;
+            }
             //Movemos delantero a su posicion nueva
             delantero = bloqueA;
             posDelantero = 0;
@@ -103,12 +107,28 @@ char* siguienteCaracter(int lexemaSigue){
             }
             r = delantero;
             delantero++;
-            posDelantero++;
+            if(leidos > TAM_BLOQUE && lexemaSigue){
+                errorLexemaGrande();
+                leidos = 0;
+                return NULL;
+            }
             leidos++;
+            posDelantero++;
             return r;
         }
     }
+    
 
+    
+    //Antes de avanzar con el delantero, está bien comprobar que el lexema no se pasa del tamaño del bloque
+    //El motivo de comprobarlo aquí y no más abajo cuando se suma delantero es cuestión de eficiencia
+    //Si lo compruebo aquí y resulta que el lexema se pasa, puedo ir alternando entre los bloques hasta que se acabe de leer
+    if(leidos > TAM_BLOQUE && lexemaSigue){
+        errorLexemaGrande();
+        leidos = 0;
+        return NULL;
+    }
+    leidos++;
     delantero++;
     if(!lexemaSigue){
         inicio = delantero;
@@ -120,16 +140,18 @@ char* siguienteCaracter(int lexemaSigue){
 
 void devolverCaracter(){
     //Si el puntero de delantero está justo al principio del bloqueB
-    if(posDelantero == 15){
+    if(posDelantero == TAM_BLOQUE){
         //Lo coloco en el EOF de bloqueA
         delantero = bloqueA + (TAM_BLOQUE - 1);
         posDelantero = TAM_BLOQUE - 1;
+        noQuitar = 1;
     }
     //Si el puntero de delantero está justo al principio del bloqueA
     else if(posDelantero == 0){
         //Lo coloco en el EOF de bloqueB
         delantero = bloqueB + (TAM_BLOQUE - 1);
         posDelantero = TAM_BLOQUE*2 - 2;
+        noQuitar = 1;
     }
     //Está en medio, y se puede restar bien
     else{

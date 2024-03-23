@@ -9,12 +9,15 @@
 #include <string.h>
 #include <ctype.h>
 
+//Necesita la raiz de la tabla. Además, cada caracter lo guarda en un buffer que se va sobreescribiendo, por lo que siempre habrá 3 copias en total de un char leido
+//char* p es para leer un char, y linea es el contador de líneas
 extern ComponenteLexico* raizTabla;
 char buffer[TAM_BLOQUE];
 int posBuffer = 0;
 char* p;
 int linea = 1;
 
+//Las declaraciones de todos los autómatas empleados
 int esDelimitador(int c);
 int esOperador(int c);
 ComponenteLexico* procesarComentario(int c);
@@ -29,7 +32,7 @@ ComponenteLexico* procesarNumeroHexadecimal(int c, int start);
 ComponenteLexico* procesarFloat(int c, int start);
 
 /*
-Aquí es donde se pide un char y se decide a qué autómata se pasa dicho char
+Aquí es donde se pide un char y se decide a qué autómata se pasa dicho char, es mitad del léxico básicamente
 */
 ComponenteLexico* siguienteComponenteLexico(){
 
@@ -38,7 +41,7 @@ ComponenteLexico* siguienteComponenteLexico(){
     p = siguienteCaracter(1);
     if(p != NULL){
         c = *p;
-        //Los espacios, los saltos de línea y las tabulaciones, así como el fin del archivo no importan, se ignoran
+        //Los espacios, los saltos de línea y las tabulaciones, se ignoran
         while(c == '\n' || c == ' ' || c == '\t'){
 
             if(c == '\n')
@@ -49,22 +52,23 @@ ComponenteLexico* siguienteComponenteLexico(){
             if (p != NULL) {
                 c = *p;
             }
-            else {
-                // Handle the case where p is NULL (end of file or error)
-                break;
-            }
         }
-        //CHAPUZA
+
+        //Dentro del bucle anterior no se cuentan los caracteres leidos para formar parte de un lexema, de modo que si
+        //procediese sin devolver el caracter, el contador de leidos no estaría bien, por lo que decidí devolver y retomar otra vez
         devolverCaracter();
         p = siguienteCaracter(1);
         if (p != NULL) {
             c = *p;
         }
 
+        //A PARTIR DE AQUI HAY MUCHOS IFS Y CADA UNO VA PARA AUTÓMATAS DIFERENTES
+
         //Esto es comentario de una sóla línea
         if(c == '#'){
             return procesarComentario(c);
         }
+        //Esto puede ser un literal o un comentario, tengo que comprobarlo
         else if(c == '"'){
             p = siguienteCaracter(0);
             c = *p;
@@ -82,7 +86,7 @@ ComponenteLexico* siguienteComponenteLexico(){
                 }   
             }
         }
-        //Si es un literal de una sóla de comilla
+        //Esto también es un literal, pero de una sóla comilla (también puede ser comentario multi linea)
         else if(c == '\''){
             p = siguienteCaracter(0);
             c = *p;
@@ -108,22 +112,14 @@ ComponenteLexico* siguienteComponenteLexico(){
         else if(isdigit(c)){
             //Guardo el primer dígito
             buffer[0] = c;
-            //Delantero está en - después de la llamada de abajo
+            
             p = siguienteCaracter(1);
             c = *p;
-
-            while(c == '\n' || c == ' ' || c == '\t'){
-                if(c == '\n')
-                    linea++;
-                p = siguienteCaracter(0);
-                c = *p;
-            }
 
             //PARTE FLOATS
             //Para los floats exponenciales (por ejemplo 5e-2)
             if(c == 'e'){
                 buffer[1] = c;
-                //Delantero está en 2 después de la llamada de abajo
                 p = siguienteCaracter(1);
                 c = *p;
                 //Después de la e puede haber un - que tengo que considerar, si no lo hay ahora, no lo va a haber en ningún otro sitio
@@ -188,13 +184,6 @@ ComponenteLexico* siguienteComponenteLexico(){
             p = siguienteCaracter(1);
             c = *p;
 
-            while(c == '\n' || c == ' ' || c == '\t'){
-                if(c == '\n')
-                    linea++;
-                p = siguienteCaracter(0);
-                c = *p;
-            }
-
             //Si el siguiente char es un dígito, es un float
             if(isdigit(c)){
                 return procesarFloat(c, 1);
@@ -205,6 +194,7 @@ ComponenteLexico* siguienteComponenteLexico(){
                 return procesarDelimitador(buffer[0]);
             }
         }
+        //La única vez que llega un EOF es si es fin de archivo, por lo que se crea componente léxico y se retorna
         else if(c == EOF){
             ComponenteLexico* a = crearNodo("EOF", EOF);
             return a;
@@ -222,6 +212,7 @@ int esDelimitador(int c){
     return (c == '{' || c == '(' || c == '[' || c == ',' || c == ':' || c == '}' || c == ')' || c == ']') || esOperador(c);
 }
 
+//Funco
 int esOperador(int c){
     return (c == '+' || c == '-' || c == '/' || c == '*' || c == '^' || c == '=' || c == '<' || c == '>' || c == '%');
 }
@@ -245,7 +236,7 @@ ComponenteLexico* procesarComentario(int c){
 ComponenteLexico* procesarLiteral(int c, char comienzo){
     buffer[0] = c;
     int i = 1;
-
+    //Como puede haber comillas de diferente tipo del que comienzan y no puedo cerrarlo si no encuentro el tipo con el que empieza
     while ((p = siguienteCaracter(1)) != NULL) {
         c = *p;
         buffer[i] = c;
@@ -275,7 +266,7 @@ ComponenteLexico* procesarLiteral(int c, char comienzo){
 //Autómata que procesa los comentarios multi linea
 ComponenteLexico* procesarComentarioMulti(int c){
 
-    //Lo único de lso comentarios es que si empiezan por comiilas triples, tienen que acabar en comillas triples y viceversa, por lo que hay que tenerlo en cuenta
+    //Lo único de los comentarios es que si empiezan por comiilas triples, tienen que acabar en comillas triples y viceversa, por lo que hay que tenerlo en cuenta
     char comienzo = c;
 
     while ((p = siguienteCaracter(0)) != NULL) {
@@ -316,6 +307,7 @@ ComponenteLexico* procesarCadenaAlfanumerica(int c){
     int i = 1;
     buffer[0] = c;
 
+    //Al igual que en el resto, se van guardando en el buffer hasta encontrar un delimitador
     while ((p = siguienteCaracter(1)) != NULL) {
         c = *p;
         if(isalnum(c) || c == '_'){
@@ -343,6 +335,7 @@ ComponenteLexico* procesarCadenaAlfanumerica(int c){
             }
         }
     }
+    //Primero tengo que ver si el componente léxico ya existe, porque en ese caso no me hace falta crear uno nuevo
     ComponenteLexico* a;
     a = buscar(raizTabla, buffer);
     //Si no se encuentra, hay que añadirlo y es un ID
@@ -354,19 +347,21 @@ ComponenteLexico* procesarCadenaAlfanumerica(int c){
     return a;
 }
 
-//Autómata que procesa números
+//Autómata que procesa números ENTEROS
 ComponenteLexico* procesarNumero(int c, int start){
     buffer[start] = c;
     int i = start + 1;
 
+    //Se leen dígitos y se añaden al buffer hasta encontrar algo que no sea dígito
     while ((p = siguienteCaracter(1)) != NULL) {
         c = *p;
         if(c != EOF){
-            if(isdigit(c) || c == 'x'){
+            if(isdigit(c)){
                 buffer[i] = c;
                 i++;
             }
             else{
+                //Se acaba el buffer y se crea componente léxico
                 devolverCaracter();
                 if (posBuffer <= TAM_BLOQUE - 1){
                     buffer[i] = '\0';
@@ -386,19 +381,19 @@ ComponenteLexico* procesarNumeroHexadecimal(int c, int start){
 
     while ((p = siguienteCaracter(1)) != NULL) {
         c = *p;
-        if(c != EOF){
-            if(isdigit(c) || (c >= 97 && c <= 102)){
-                buffer[i] = c;
-                i++;
+        //Si es dígito o entre A y F, se añade al buffer
+        if(isdigit(c) || (c >= 97 && c <= 102)){
+            buffer[i] = c;
+            i++;
+        }
+        else{
+            //Creamos componente léxico
+            devolverCaracter();
+            if (posBuffer <= TAM_BLOQUE - 1){
+                buffer[i] = '\0';
             }
-            else{
-                devolverCaracter();
-                if (posBuffer <= TAM_BLOQUE - 1){
-                    buffer[i] = '\0';
-                }
-                ComponenteLexico *a = crearNodo(buffer, NUMERO);
-                return a;
-            }
+            ComponenteLexico *a = crearNodo(buffer, NUMERO);
+            return a;
         }
     }
     return NULL;
@@ -411,25 +406,24 @@ ComponenteLexico* procesarFloat(int c, int start){
     int i = start + 1;
     while((p = siguienteCaracter(1)) != NULL){
         c = *p;
-        if(c != EOF){
-            if(isdigit(c)){
-                buffer[i] = c;
-                i++;
+        //Funciona de la misma manera que los autómatas para números
+        if(isdigit(c)){
+            buffer[i] = c;
+            i++;
+        }
+        else{
+            devolverCaracter();
+            if (i <= TAM_BLOQUE - 1){
+                buffer[i] = '\0';
             }
-            else{
-                devolverCaracter();
-                if (i <= TAM_BLOQUE - 1){
-                    buffer[i] = '\0';
-                }
-                ComponenteLexico *a = crearNodo(buffer, NUMERO);
-                return a;
-            }
+            ComponenteLexico *a = crearNodo(buffer, NUMERO);
+            return a;
         }
     }
     return NULL;
 }
 
-//Autómata que procesa los delimitadores
+//Autómata que procesa los delimitadores, como ya se habrá leído su carácter, es muy trivial
 ComponenteLexico* procesarDelimitador(int c){
     buffer[0] = c;
     buffer[1] = '\0';
@@ -488,7 +482,7 @@ ComponenteLexico* procesarOperacion(int c){
             break;
         }
         return a;
-    //Aquí vendrían operadores como **, //=, pero sólo el primero está en el wilcoxon
+    //Aquí vendrían operadores como **, //=, pero sólo ** está en el wilcoxon
     case '/':
         break;
     case '*':
@@ -505,7 +499,7 @@ ComponenteLexico* procesarOperacion(int c){
     case '<':
         break;
     default:
-        //Es una operación de único carácter
+        //Si el segundo char no se corresponde con ningún otro caso, es una operación de un único carácter (un + o un =)
         devolverCaracter();
         buffer[1] = '\0';
         a = crearNodo(buffer, buffer[0]);

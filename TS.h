@@ -19,7 +19,7 @@ ComponenteLexico* buscar(ComponenteLexico* raiz, char* lexema);
 //Función para borrar el arbol entero
 void borrarArbol(ComponenteLexico* raiz);
 
-//Imprimir el arbol
+//Imprimir el arbol en orden alfabético (usando ASCII) de lexemas
 void recorridoInorden(ComponenteLexico* raiz);
 
 

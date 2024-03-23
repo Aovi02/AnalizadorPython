@@ -3,8 +3,10 @@
 #include "sintactico.h"
 #include "definiciones.h"
 #include "entrada.h"
+#include "errores.h"
 #include <stdio.h>
 
+//Variables para guardar el archivo y la raiz de la tabla (se llama raiz porque es un árbol binario, pero es básicamente la TS)
 FILE* archivo;
 ComponenteLexico* raizTabla;
 
@@ -16,14 +18,14 @@ int main(){
     if(archivo == NULL){
         archivo = fopen("wilcoxon.py", "r");
         if(archivo == NULL){
-            perror("Error al abrir el archivo");
+            errorAperturaArchivo();
             return -1;
         }
     }
     //Iniciamos el sistema de entrada
     iniciarEntrada();
 
-    //Iniciamos tabla de símbolos
+    //Iniciamos tabla de símbolos e imprimimos su estado
     iniciarTabla();
     printf("ESTADO DE LA TABLA DE SIMBOLOS TRAS INICIALIZACION:\n");
     recorridoInorden(raizTabla);
@@ -32,6 +34,7 @@ int main(){
     //Iniciamos analizador sintactico
     iniciarSintactico();
 
+    //Cuando acabe el análisis léxico, imprimimos el estado de la tabla de símbolos
     printf("ESTADO DE LA TABLA DE SIMBOLOS AL FINALIZAR:\n");
     recorridoInorden(raizTabla);
     printf("\n\n");
@@ -39,7 +42,7 @@ int main(){
     //Borrar árbol al final
     borrarArbol(raizTabla);
 
-    //Limpiar SE
+    //Limpiar sistema de entrada
     limpiarEntrada();
 
     //Cerrar archivo

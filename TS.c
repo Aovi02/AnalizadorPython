@@ -6,7 +6,7 @@
 #include <string.h>
 
 ComponenteLexico* crearNodo(char* lexema, int valor){
-    //Reservar memoria para el primer nodo
+    //Reservar memoria para el nodo
     ComponenteLexico* raiz = (ComponenteLexico*) malloc(sizeof(ComponenteLexico));
     //Configurar el nodo
     int len = strlen(lexema);

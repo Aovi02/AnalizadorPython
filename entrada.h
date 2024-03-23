@@ -11,11 +11,15 @@
 //Si sigue, no se borra el bloque actual hasta que se devuelva caracter
 char* siguienteCaracter(int lexemaSigue);
 
+/*
+Función que inicializa el sistema de entrada, reserva memoria y lee contenido para el primer bloque. Ajusta los punteros delantero e inicio también.
+*/
 void iniciarEntrada();
 
-//Indica al sistema de entrada que se devuelve un caracter, marca el final de un lexema
+//Indica al sistema de entrada que se devuelve un caracter, marcando el final de un lexema y hace los ajustes apropiados para los bloques
 void devolverCaracter();
 
+//Función que libera los buffers y pone todos los punteros a NULL
 void limpiarEntrada();
 
 #endif //ENTRADA_H

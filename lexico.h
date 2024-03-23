@@ -2,6 +2,7 @@
 #define LEXICO_H
 /*
 Representación de un componente léxico, con su número y su lexema
+Contiene los punteros a su izquierda y derecha al ser un árbol binario
 */
 typedef struct ComponenteLexico{
     int valor;

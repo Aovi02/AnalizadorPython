@@ -1,4 +1,6 @@
 Para compilar este analizador léxico, simplemente usa "make". Lo he probado en Ubuntu 20.04 LTS el 23/03/2023 y ha funcionado sin warnings y sin otros problemas.
+Para ejecutarlo, usa "./main".
+También he probado el programa usando valgrind con el comando "valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./main" y todo se libera correctamente.
 
 En este documento voy a explicar algunas de las decisiones que he tomado a la hora de hacer el analizador, que pueden liar a primera vista.
 
